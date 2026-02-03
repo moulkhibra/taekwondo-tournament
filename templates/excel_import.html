@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3><i class="fas fa-file-excel text-success"></i> Import Players from Excel</h3>
+                <div>
+                    <a href="{{ url_for('main.view_tournament', id=tournament.id) }}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back to Tournament
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Tournament Info -->
+                <div class="alert alert-info">
+                    <h5><i class="fas fa-info-circle"></i> Tournament Information</h5>
+                    <p class="mb-0">
+                        <strong>Name:</strong> {{ tournament.name }}<br>
+                        <strong>Type:</strong> {{ tournament.tournament_type.value.title() }}<br>
+                        <strong>Date:</strong> {{ tournament.date.strftime('%B %d, %Y') }}
+                    </p>
+                </div>
+
+                <!-- Instructions -->
+                <div class="alert alert-warning">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Important Instructions</h5>
+                    <ol>
+                        <li><strong>Download Template:</strong> First download the Excel template using the button below</li>
+                        <li><strong>Fill Data:</strong> Complete the template with player information</li>
+                        <li><strong>Required Columns:</strong> Name, Club, Gender, Age, Weight</li>
+                        <li><strong>Valid Values:</strong>
+                            <ul>
+                                <li><strong>Gender:</strong> Male, Female, M, F (case-insensitive)</li>
+                                <li><strong>Age:</strong> Numbers between 14-80 years</li>
+                                <li><strong>Weight:</strong> Numbers between 20-150 kg (required for Kyourgi)</li>
+                            </ul>
+                        </li>
+                        <li><strong>No Duplicates:</strong> Avoid duplicate players in the same tournament</li>
+                        <li><strong>Upload:</strong> Choose the filled file and click "Import Players"</li>
+                    </ol>
+                </div>
+
+                <!-- Download Template Button -->
+                <div class="text-center mb-4">
+                    <a href="{{ url_for('main.excel_download_template') }}" class="btn btn-success btn-lg">
+                        <i class="fas fa-download"></i> Download Excel Template
+                    </a>
+                    <p class="text-muted mt-2">Download the template file with examples and instructions</p>
+                </div>
+
+                <!-- Upload Form -->
+                <form method="POST" enctype="multipart/form-data" id="importForm">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">
+                            <strong>Select Excel File:</strong>
+                        </label>
+                        <input type="file" class="form-control" id="file" name="file" 
+                               accept=".xlsx,.xls" required>
+                        <div class="form-text">
+                            Supported formats: .xlsx, .xls (max 10MB)
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('main.view_tournament', id=tournament.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="fas fa-upload"></i> Import Players
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sample Preview -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-eye"></i> Expected Excel Format</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Club</th>
+                                <th>Gender</th>
+                                <th>Age</th>
+                                <th>Weight</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>John Doe</td>
+                                <td>Taekwondo Academy</td>
+                                <td>Male</td>
+                                <td>25</td>
+                                <td>75.5</td>
+                            </tr>
+                            <tr>
+                                <td>Jane Smith</td>
+                                <td>Martial Arts Club</td>
+                                <td>Female</td>
+                                <td>19</td>
+                                <td>62.0</td>
+                            </tr>
+                            <tr>
+                                <td>Ahmed Hassan</td>
+                                <td>Sports Center</td>
+                                <td>M</td>
+                                <td>16</td>
+                                <td>65.0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('importForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const fileInput = document.getElementById('file');
+
+    form.addEventListener('submit', function(e) {
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            e.preventDefault();
+            alert('Please select an Excel file to import.');
+            return;
+        }
+
+        // Check file size (10MB limit)
+        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        if (file.size > maxSize) {
+            e.preventDefault();
+            alert('File size must be less than 10MB.');
+            return;
+        }
+
+        // Check file extension
+        const allowedExtensions = ['.xlsx', '.xls'];
+        const fileName = file.name.toLowerCase();
+        const isValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+        
+        if (!isValidExtension) {
+            e.preventDefault();
+            alert('Please select a valid Excel file (.xlsx or .xls).');
+            return;
+        }
+
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+    });
+
+    // Preview selected file
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const fileSize = (file.size / 1024 / 1024).toFixed(2);
+            console.log(`Selected file: ${file.name} (${fileSize} MB)`);
+        }
+    });
+});
+</script>
+{% endblock %}

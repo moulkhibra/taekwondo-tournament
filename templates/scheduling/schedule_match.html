@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Schedule Match - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-calendar-plus"></i> Schedule Match</h2>
+    <a href="{{ url_for('scheduling.tournament_schedule', tournament_id=match.tournament_id) }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Schedule
+    </a>
+</div>
+
+<!-- Match Details -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Match Details</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <strong>Round:</strong> {{ match.round_number }}<br>
+                <strong>Match Number:</strong> {{ match.match_number }}<br>
+                <strong>Category:</strong> 
+                <span class="badge bg-info">
+                    {{ match.category_key.replace('_', ' ').title() }}
+                </span>
+            </div>
+            <div class="col-md-6">
+                <strong>Players:</strong> 
+                {% if match.player1 and match.player2 %}
+                    {{ match.player1.name }} vs {{ match.player2.name }}
+                {% elif match.player1 %}
+                    {{ match.player1.name }} (BYE)
+                {% else %}
+                    TBD vs TBD
+                {% endif %}
+                <br>
+                <strong>Tournament:</strong> {{ match.tournament.name }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scheduling Form -->
+<div class="card shadow">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">Scheduling Information</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    {{ form.scheduled_time.label(class="form-label") }}
+                    {{ form.scheduled_time(class="form-control", placeholder="YYYY-MM-DD HH:MM") }}
+                    <div class="form-text">Format: YYYY-MM-DD HH:MM (24-hour format)</div>
+                    {% if form.scheduled_time.errors %}
+                        <div class="text-danger small">
+                            {% for error in form.scheduled_time.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    {{ form.ring_number.label(class="form-label") }}
+                    {{ form.ring_number(class="form-control", min=1, max=20) }}
+                    {% if form.ring_number.errors %}
+                        <div class="text-danger small">
+                            {% for error in form.ring_number.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    {{ form.estimated_duration.label(class="form-label") }}
+                    <div class="input-group">
+                        {{ form.estimated_duration(class="form-control", min=5, max=60) }}
+                        <span class="input-group-text">min</span>
+                    </div>
+                    {% if form.estimated_duration.errors %}
+                        <div class="text-danger small">
+                            {% for error in form.estimated_duration.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    {{ form.referee_id.label(class="form-label") }}
+                    {{ form.referee_id(class="form-select") }}
+                    {% if form.referee_id.errors %}
+                        <div class="text-danger small">
+                            {% for error in form.referee_id.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <div class="form-label">&nbsp;</div>
+                    <div class="alert alert-info small">
+                        <i class="fas fa-info-circle"></i> 
+                        Select a referee to assign them to this match
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('scheduling.tournament_schedule', tournament_id=match.tournament_id) }}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+                {{ form.submit(class="btn btn-success") }}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card shadow mt-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Quick Actions</h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            {% if match.player1 and match.player2 %}
+            <div class="col-md-4">
+                <a href="{{ url_for('scoring.match_scoring', match_id=match.id) }}" class="btn btn-outline-primary btn-sm w-100">
+                    <i class="fas fa-crosshairs"></i><br>
+                    Score Match
+                </a>
+            </div>
+            {% endif %}
+            {% if current_user.is_admin() %}
+            <div class="col-md-4">
+                <a href="{{ url_for('main.view_tournament', id=match.tournament_id) }}" class="btn btn-outline-info btn-sm w-100">
+                    <i class="fas fa-eye"></i><br>
+                    View Tournament
+                </a>
+            </div>
+            {% endif %}
+            <div class="col-md-4">
+                <button type="button" class="btn btn-outline-warning btn-sm w-100" onclick="window.print()">
+                    <i class="fas fa-print"></i><br>
+                    Print Schedule
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Set default date and time to tournament date + current time
+document.addEventListener('DOMContentLoaded', function() {
+    const scheduledTimeField = document.querySelector('input[name="scheduled_time"]');
+    if (scheduledTimeField && !scheduledTimeField.value) {
+        const now = new Date();
+        const formattedDate = now.getFullYear() + '-' + 
+            String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+            String(now.getDate()).padStart(2, '0') + ' ' + 
+            String(now.getHours()).padStart(2, '0') + ':' + 
+            String(now.getMinutes()).padStart(2, '0');
+        scheduledTimeField.value = formattedDate;
+    }
+});
+</script>
+{% endblock %}

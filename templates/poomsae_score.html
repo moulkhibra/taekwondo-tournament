@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1>Score Poomsae Match</h1>
+                <p class="text-muted mb-0">
+                    <strong>Tournament:</strong> {{ match.tournament.name }} | 
+                    <strong>Match:</strong> Round {{ match.round_number }} - Match {{ match.match_number }}
+                </p>
+            </div>
+            <a href="{{ url_for('main.view_tournament', id=match.tournament_id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Tournament
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-trophy"></i> WT 5-Judge Scoring System</h4>
+                <small class="text-muted">Each judge provides Accuracy (0-10) and Presentation (0-10) scores. 
+                The system will automatically remove highest and lowest totals, then average the remaining 3 scores.</small>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="poomsae-scoring-form">
+                    <!-- Player Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-user"></i> Athlete Information</h6>
+                                {% if match.player1 %}
+                                    <strong>Name:</strong> {{ match.player1.name }} | 
+                                    <strong>Club:</strong> {{ match.player1.club }} | 
+                                    <strong>Category:</strong> {{ match.category_key.replace('_', ' ').title() }}
+                                {% else %}
+                                    <strong>TBD - Player not assigned</strong>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Judges Scoring Table -->
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Judge</th>
+                                    <th>Accuracy Score (0-10)</th>
+                                    <th>Presentation Score (0-10)</th>
+                                    <th>Total (Auto-calculated)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i in range(1, 6) %}
+                                <tr>
+                                    <td><strong>Judge {{ i }}</strong></td>
+                                    <td>
+                                        <input type="number" 
+                                               name="judge{{ i }}_accuracy" 
+                                               class="form-control accuracy-input" 
+                                               min="0" 
+                                               max="10" 
+                                               step="0.1" 
+                                               data-judge="{{ i }}"
+                                               required 
+                                               placeholder="0.0 - 10.0">
+                                    </td>
+                                    <td>
+                                        <input type="number" 
+                                               name="judge{{ i }}_presentation" 
+                                               class="form-control presentation-input" 
+                                               min="0" 
+                                               max="10" 
+                                               step="0.1" 
+                                               data-judge="{{ i }}"
+                                               required 
+                                               placeholder="0.0 - 10.0">
+                                    </td>
+                                    <td>
+                                        <div class="judge-total" id="judge{{ i }}-total">0.0</div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Score Summary -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6><i class="fas fa-calculator"></i> Score Calculation</h6>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <small class="text-muted">Highest Score (Removed):</small>
+                                            <div class="fw-bold" id="highest-score">-</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Lowest Score (Removed):</small>
+                                            <div class="fw-bold" id="lowest-score">-</div>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <small class="text-muted">Average of Middle 3 Scores:</small>
+                                    <div class="h4 text-success" id="final-score">0.0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h6><i class="fas fa-trophy"></i> Final Score</h6>
+                                    <div class="display-4" id="display-final-score">0.0</div>
+                                    <small>This will be saved as the official score</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="row">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-success btn-lg" id="submit-btn">
+                                <i class="fas fa-save"></i> Save Final Score
+                            </button>
+                            <a href="{{ url_for('main.view_tournament', id=match.tournament_id) }}" 
+                               class="btn btn-secondary btn-lg ms-2">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Validation and Calculation JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const accuracyInputs = document.querySelectorAll('.accuracy-input');
+    const presentationInputs = document.querySelectorAll('.presentation-input');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    function calculateJudgeTotal(judgeNum) {
+        const accuracy = parseFloat(document.querySelector(`input[name="judge${judgeNum}_accuracy"]`).value) || 0;
+        const presentation = parseFloat(document.querySelector(`input[name="judge${judgeNum}_presentation"]`).value) || 0;
+        const total = accuracy + presentation;
+        
+        document.getElementById(`judge${judgeNum}-total`).textContent = total.toFixed(1);
+        return total;
+    }
+    
+    function calculateFinalScore() {
+        const totals = [];
+        
+        // Calculate each judge's total
+        for (let i = 1; i <= 5; i++) {
+            const total = calculateJudgeTotal(i);
+            totals.push(total);
+        }
+        
+        // Filter out zeros (unfilled scores)
+        const validTotals = totals.filter(t => t > 0);
+        
+        if (validTotals.length >= 3) {
+            // Sort and remove highest/lowest
+            const sortedTotals = [...validTotals].sort((a, b) => a - b);
+            const lowest = sortedTotals[0];
+            const highest = sortedTotals[sortedTotals.length - 1];
+            
+            // Remove highest and lowest
+            sortedTotals.pop(); // Remove highest
+            sortedTotals.shift(); // Remove lowest
+            
+            // Calculate average of remaining 3
+            const finalScore = sortedTotals.reduce((a, b) => a + b, 0) / sortedTotals.length;
+            
+            // Update display
+            document.getElementById('highest-score').textContent = highest.toFixed(1);
+            document.getElementById('lowest-score').textContent = lowest.toFixed(1);
+            document.getElementById('final-score').textContent = finalScore.toFixed(2);
+            document.getElementById('display-final-score').textContent = finalScore.toFixed(2);
+            
+            // Enable submit button if all judges have scores
+            const allJudgesHaveScores = validTotals.length === 5;
+            submitBtn.disabled = !allJudgesHaveScores;
+            
+        } else {
+            // Reset display
+            document.getElementById('highest-score').textContent = '-';
+            document.getElementById('lowest-score').textContent = '-';
+            document.getElementById('final-score').textContent = '0.0';
+            document.getElementById('display-final-score').textContent = '0.0';
+            submitBtn.disabled = true;
+        }
+    }
+    
+    // Add event listeners to all inputs
+    accuracyInputs.forEach(input => {
+        input.addEventListener('input', calculateFinalScore);
+    });
+    
+    presentationInputs.forEach(input => {
+        input.addEventListener('input', calculateFinalScore);
+    });
+    
+    // Validate input ranges
+    function validateInput(input) {
+        const value = parseFloat(input.value);
+        if (value < 0) input.value = 0;
+        if (value > 10) input.value = 10;
+    }
+    
+    accuracyInputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            validateInput(this);
+            calculateFinalScore();
+        });
+    });
+    
+    presentationInputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            validateInput(this);
+            calculateFinalScore();
+        });
+    });
+    
+    // Form submission validation
+    document.getElementById('poomsae-scoring-form').addEventListener('submit', function(e) {
+        const totals = [];
+        for (let i = 1; i <= 5; i++) {
+            const accuracy = parseFloat(document.querySelector(`input[name="judge${i}_accuracy"]`).value) || 0;
+            const presentation = parseFloat(document.querySelector(`input[name="judge${i}_presentation"]`).value) || 0;
+            totals.push(accuracy + presentation);
+        }
+        
+        const validTotals = totals.filter(t => t > 0);
+        if (validTotals.length !== 5) {
+            e.preventDefault();
+            alert('Please enter scores for all 5 judges!');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

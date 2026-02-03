@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1>{{ tournament.name }}</h1>
+                <p class="text-muted mb-0">
+                    <i class="fas fa-calendar"></i> {{ tournament.date.strftime('%B %d, %Y') }} | 
+                    <i class="fas fa-map-marker-alt"></i> {{ tournament.location }} | 
+                    <span class="badge bg-{{ 'primary' if tournament.tournament_type.value == 'kyourgi' else 'secondary' }}">
+                        {{ tournament.tournament_type.value.title() }}
+                    </span>
+                </p>
+            </div>
+            <div>
+                <a href="{{ url_for('main.create_player') }}" class="btn btn-success">
+                    <i class="fas fa-user-plus"></i> Add Player
+                </a>
+                <a href="{{ url_for('main.excel_import_players', tournament_id=tournament.id) }}" class="btn btn-success">
+                    <i class="fas fa-file-excel"></i> Import Excel
+                </a>
+                <a href="{{ url_for('main.generate_draw') }}" class="btn btn-warning">
+                    <i class="fas fa-random"></i> Generate Draw
+                </a>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('main.excel_export_brackets', tournament_id=tournament.id) }}">
+                            <i class="fas fa-file-excel text-success"></i> Export Brackets (Excel)
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('main.export_tournament', id=tournament.id, format='text') }}">
+                            <i class="fas fa-file-alt text-info"></i> Export (Text)
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('main.export_tournament', id=tournament.id, format='pdf') }}">
+                            <i class="fas fa-file-pdf text-danger"></i> Export (PDF)
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Players Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4><i class="fas fa-users"></i> Players ({{ players|length }})</h4>
+                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#filterForm">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+            </div>
+            <div class="collapse" id="filterForm">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            {{ filter_form.gender.label(class="form-label") }}
+                            {{ filter_form.gender(class="form-select form-select-sm") }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ filter_form.age_group.label(class="form-label") }}
+                            {{ filter_form.age_group(class="form-select form-select-sm") }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ filter_form.weight_category.label(class="form-label") }}
+                            {{ filter_form.weight_category(class="form-select form-select-sm") }}
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            {{ filter_form.submit(class="btn btn-primary btn-sm") }}
+                            <a href="{{ url_for('main.view_tournament', id=tournament.id) }}" class="btn btn-secondary btn-sm ms-2">
+                                Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if players %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Club</th>
+                                    <th>Gender</th>
+                                    <th>Age</th>
+                                    <th>Age Group</th>
+                                    {% if tournament.tournament_type.value == 'kyourgi' %}
+                                    <th>Weight</th>
+                                    <th>Weight Cat.</th>
+                                    {% endif %}
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in players %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td><strong>{{ player.name }}</strong></td>
+                                    <td>{{ player.club }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'primary' if player.gender.value == 'male' else 'danger' }}">
+                                            {{ player.gender.value.title() }}
+                                        </span>
+                                    </td>
+                                    <td>{{ player.age }}</td>
+                                    <td>{{ player.age_group.value.title() }}</td>
+                                    {% if tournament.tournament_type.value == 'kyourgi' %}
+                                    <td>{{ player.weight }}kg</td>
+                                    <td>{{ player.weight_category.value.title() }}</td>
+                                    {% endif %}
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('main.edit_player', id=player.id) }}" class="btn btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form method="POST" action="{{ url_for('main.delete_player', id=player.id) }}" style="display: inline;">
+                                                <button type="submit" class="btn btn-outline-danger" 
+                                                        onclick="return confirm('Are you sure you want to delete this player?')">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Players Added</h5>
+                        <p class="text-muted">Add players to this tournament to get started!</p>
+                        <a href="{{ url_for('main.create_player') }}" class="btn btn-success">
+                            <i class="fas fa-user-plus"></i> Add First Player
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tournament Brackets -->
+{% if matches_by_category %}
+<div class="row">
+    <div class="col-12">
+        <h3><i class="fas fa-sitemap"></i> Tournament Brackets</h3>
+        
+        {% for category_key, matches in matches_by_category.items() %}
+        <div class="bracket-container mb-4">
+            <div class="category-title">
+                <h5 class="mb-0">
+                    {% set parts = category_key.split('_') %}
+                    {% set gender = 'Male' if parts[0] == 'male' else 'Female' %}
+                    {% set age_group = parts[1].title() %}
+                    {% if tournament.tournament_type.value == 'kyourgi' %}
+                        {% set weight = parts[2].title() %}
+                        {{ gender }} {{ age_group }} {{ weight }} Kyourgi
+                    {% else %}
+                        {{ gender }} {{ age_group }} Poomsae
+                    {% endif %}
+                </h5>
+            </div>
+            
+            <!-- Group matches by round -->
+            {% set rounds = {} %}
+            {% for match in matches %}
+                {% if match.round_number not in rounds %}
+                    {% set _ = rounds.update({match.round_number: []}) %}
+                {% endif %}
+                {% set _ = rounds[match.round_number].append(match) %}
+            {% endfor %}
+            
+            {% for round_num in rounds|sort %}
+            <div class="row">
+                <div class="col-12">
+                    <div class="round-title">
+                        Round {{ round_num }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                {% for match in rounds[round_num] %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="match-box {{ 'bye' if match.is_bye else '' }}">
+                        {% if match.is_bye %}
+                            <div class="text-center">
+                                <i class="fas fa-star"></i> <strong>BYE</strong><br>
+                                {% if match.player1 %}
+                                    <span class="player-name">{{ match.player1.name }}</span><br>
+                                    <small class="text-muted">{{ match.player1.club }}</small>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div class="row align-items-center h-100">
+                                <div class="col-5 text-end">
+                                    {% if match.player1 %}
+                                        <div class="player-name">{{ match.player1.name }}</div>
+                                        <small class="text-muted">{{ match.player1.club }}</small>
+                                    {% else %}
+                                        <div class="text-muted">TBD</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-2 text-center">
+                                    <span class="vs-text">VS</span>
+                                </div>
+                                <div class="col-5">
+                                    {% if match.player2 %}
+                                        <div class="player-name">{{ match.player2.name }}</div>
+                                        <small class="text-muted">{{ match.player2.club }}</small>
+                                    {% else %}
+                                        <div class="text-muted">TBD</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        {% if match.completed %}
+                        <div class="mt-2 text-center">
+                            <small class="badge bg-success">Completed</small>
+                            {% if match.scores and match.tournament.tournament_type.value == 'poomsae' %}
+                                <div class="mt-1">
+                                    <small class="badge bg-info">Score: {{ match.scores[0].total_score }}</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if not match.completed and match.tournament.tournament_type.value == 'poomsae' and match.player1 %}
+                        <div class="mt-2 text-center">
+                            <a href="{{ url_for('main.poomsae_score', match_id=match.id) }}" 
+                               class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-star"></i> Score Match
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="row">
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-sitemap fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No Draw Generated</h4>
+            <p class="text-muted">Generate the tournament draw to see the brackets!</p>
+            <a href="{{ url_for('main.generate_draw') }}" class="btn btn-warning">
+                <i class="fas fa-random"></i> Generate Draw Now
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

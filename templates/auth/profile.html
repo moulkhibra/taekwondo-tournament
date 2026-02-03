@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0 text-center">
+                    <i class="fas fa-user-circle"></i> My Profile
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <i class="fas fa-user-circle fa-5x text-primary mb-3"></i>
+                    <h3>{{ current_user.full_name }}</h3>
+                    <span class="badge bg-{{ 'danger' if current_user.role.value == 'admin' else 'primary' if current_user.role.value == 'referee' else 'info' if current_user.role.value == 'staff' else 'secondary' }}">
+                        {{ current_user.role.value.title() }}
+                    </span>
+                </div>
+                
+                <div class="row">
+                    <div class="col-sm-4"><strong>Username:</strong></div>
+                    <div class="col-sm-8">{{ current_user.username }}</div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-sm-4"><strong>Email:</strong></div>
+                    <div class="col-sm-8">{{ current_user.email }}</div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-sm-4"><strong>Status:</strong></div>
+                    <div class="col-sm-8">
+                        {% if current_user.is_user_active() %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-sm-4"><strong>Permissions:</strong></div>
+                    <div class="col-sm-8">
+                        <ul class="list-unstyled">
+                            {% if current_user.is_admin() %}
+                                <li><i class="fas fa-check text-success"></i> Full system access</li>
+                                <li><i class="fas fa-check text-success"></i> User management</li>
+                                <li><i class="fas fa-check text-success"></i> Tournament management</li>
+                                <li><i class="fas fa-check text-success"></i> Scoring permissions</li>
+                            {% elif current_user.is_referee() %}
+                                <li><i class="fas fa-check text-success"></i> Match scoring</li>
+                                <li><i class="fas fa-check text-success"></i> View tournaments</li>
+                            {% elif current_user.can_manage_tournaments() %}
+                                <li><i class="fas fa-check text-success"></i> Tournament management</li>
+                                <li><i class="fas fa-check text-success"></i> View tournaments</li>
+                            {% else %}
+                                <li><i class="fas fa-check text-success"></i> View tournaments</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="mt-4 text-center">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

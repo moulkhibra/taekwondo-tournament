@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-random"></i> {{ title }}</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.tournament_id.label(class="form-label") }}
+                        {{ form.tournament_id(class="form-select") }}
+                        {% if form.tournament_id.errors %}
+                            <div class="text-danger">
+                                {% for error in form.tournament_id.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Select a tournament that has players registered to generate the draw.
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> <strong>Qor3a Algorithm Info:</strong><br>
+                        • Players are randomly shuffled within each category<br>
+                        • Categories are based on gender, age group, and weight (for Kyourgi)<br>
+                        • Players with odd numbers receive BYE automatically<br>
+                        • Single elimination bracket is generated<br>
+                        • Draw is saved to database for viewing
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </a>
+                        {{ form.submit(class="btn btn-warning") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Algorithm Explanation -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-book"></i> How the Qor3a Algorithm Works</h5>
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li><strong>Categorization:</strong> Players are grouped by (gender, age group, weight category/type)</li>
+                    <li><strong>Random Shuffling:</strong> Players within each category are randomly shuffled</li>
+                    <li><strong>BYE Handling:</strong> For odd numbers, one random player gets a BYE to next round</li>
+                    <li><strong>Match Creation:</strong> Sequential pairing creates first-round matches</li>
+                    <li><strong>Bracket Generation:</strong> Complete tournament tree is generated</li>
+                    <li><strong>Fair Play:</strong> Random shuffling ensures no systematic advantage</li>
+                </ol>
+                
+                <h6>Age Groups:</h6>
+                <ul>
+                    <li><strong>Cadet:</strong> 14-17 years</li>
+                    <li><strong>Junior:</strong> 18-34 years</li>
+                    <li><strong>Senior:</strong> 35+ years</li>
+                </ul>
+                
+                <h6>Weight Categories (Kyourgi):</h6>
+                <ul>
+                    <li><strong>Light:</strong> Up to 68kg</li>
+                    <li><strong>Middle:</strong> 68-80kg</li>
+                    <li><strong>Heavy:</strong> Over 80kg</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

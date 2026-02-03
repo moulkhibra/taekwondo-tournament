@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Schedule - {{ tournament.name }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-calendar-alt"></i> Tournament Schedule - {{ tournament.name }}</h2>
+    <div>
+        <form method="POST" action="{{ url_for('scheduling.auto_schedule', tournament_id=tournament.id) }}" class="d-inline" 
+              onsubmit="return confirm('This will schedule all unscheduled matches. Continue?')">
+            <button type="submit" class="btn btn-warning">
+                <i class="fas fa-magic"></i> Auto-Schedule All
+            </button>
+        </form>
+        <a href="{{ url_for('main.view_tournament', id=tournament.id) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Tournament
+        </a>
+    </div>
+</div>
+
+<!-- Scheduled Matches -->
+{% if scheduled_matches %}
+<div class="card shadow mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="fas fa-check-circle"></i> Scheduled Matches</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Ring</th>
+                        <th>Round</th>
+                        <th>Match</th>
+                        <th>Category</th>
+                        <th>Players</th>
+                        <th>Referee</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for match in scheduled_matches %}
+                    <tr>
+                        <td>{{ match.schedule.scheduled_time.strftime('%H:%M') if match.schedule.scheduled_time else 'N/A' }}</td>
+                        <td>{{ match.schedule.ring_number or 'N/A' }}</td>
+                        <td>{{ match.round_number }}</td>
+                        <td>{{ match.match_number }}</td>
+                        <td>
+                            <span class="badge bg-info">
+                                {{ match.category_key.replace('_', ' ').title() }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if match.player1 and match.player2 %}
+                                {{ match.player1.name }} vs {{ match.player2.name }}
+                            {% elif match.player1 %}
+                                {{ match.player1.name }} (BYE)
+                            {% else %}
+                                TBD vs TBD
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if match.schedule.referee %}
+                                <span class="badge bg-primary">{{ match.schedule.referee.full_name }}</span>
+                            {% else %}
+                                <span class="text-muted">Unassigned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if match.schedule.status.value == 'completed' %}
+                                <span class="badge bg-success">Completed</span>
+                            {% elif match.schedule.status.value == 'in_progress' %}
+                                <span class="badge bg-warning">In Progress</span>
+                            {% else %}
+                                <span class="badge bg-info">Scheduled</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if match.schedule.status.value != 'completed' %}
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('scheduling.schedule_match', match_id=match.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if current_user.can_score_matches() %}
+                                {% if match.schedule.status.value == 'scheduled' %}
+                                <form method="POST" action="{{ url_for('scheduling.start_match', match_id=match.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                </form>
+                                {% elif match.schedule.status.value == 'in_progress' %}
+                                <form method="POST" action="{{ url_for('scheduling.complete_match', match_id=match.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-stop"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Unscheduled Matches -->
+{% if unscheduled_matches %}
+<div class="card shadow">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0"><i class="fas fa-clock"></i> Unscheduled Matches</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Round</th>
+                        <th>Match</th>
+                        <th>Category</th>
+                        <th>Players</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for match in unscheduled_matches %}
+                    <tr>
+                        <td>{{ match.round_number }}</td>
+                        <td>{{ match.match_number }}</td>
+                        <td>
+                            <span class="badge bg-info">
+                                {{ match.category_key.replace('_', ' ').title() }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if match.player1 and match.player2 %}
+                                {{ match.player1.name }} vs {{ match.player2.name }}
+                            {% elif match.player1 %}
+                                {{ match.player1.name }} (BYE)
+                            {% else %}
+                                TBD vs TBD
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('scheduling.schedule_match', match_id=match.id) }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-plus"></i> Schedule
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card shadow">
+    <div class="card-body text-center">
+        <i class="fas fa-trophy fa-3x text-success mb-3"></i>
+        <h4>All Matches Scheduled!</h4>
+        <p class="text-muted">All matches in this tournament have been scheduled.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

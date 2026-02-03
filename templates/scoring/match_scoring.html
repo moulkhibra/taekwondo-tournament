@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Match Scoring - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-crosshairs"></i> Match Scoring</h2>
+    <div>
+        <a href="{{ url_for('scheduling.tournament_schedule', tournament_id=match.tournament_id) }}" class="btn btn-secondary">
+            <i class="fas fa-calendar-alt"></i> Schedule
+        </a>
+        <a href="{{ url_for('main.view_tournament', id=match.tournament_id) }}" class="btn btn-info">
+            <i class="fas fa-arrow-left"></i> Back to Tournament
+        </a>
+    </div>
+</div>
+
+<!-- Match Information -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Match Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-3">
+                <small class="text-muted">Round</small>
+                <h4>{{ match.round_number }}</h4>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted">Match</small>
+                <h4>{{ match.match_number }}</h4>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted">Category</small>
+                <h5>
+                    <span class="badge bg-info">
+                        {{ match.category_key.replace('_', ' ').title() }}
+                    </span>
+                </h5>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted">Status</small>
+                <h5>
+                    {% if match.completed %}
+                        <span class="badge bg-success">Completed</span>
+                    {% else %}
+                        <span class="badge bg-warning">In Progress</span>
+                    {% endif %}
+                </h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Score Display -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">Current Score</h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-5">
+                <h3>{{ match.player1.name if match.player1 else 'TBD' }}</h3>
+                <div class="display-4 text-primary" id="player1-total-score">
+                    {% if match.player1_id in scores %}
+                        {% if match.tournament.tournament_type.value == 'kyourgi' %}
+                            {{ scores[match.player1_id].points }}
+                        {% else %}
+                            {{ "%.1f"|format(scores[match.player1_id].total_score) }}
+                        {% endif %}
+                    {% else %}
+                        0
+                    {% endif %}
+                </div>
+                {% if match.winner_id == match.player1_id %}
+                    <span class="badge bg-success">Winner!</span>
+                {% endif %}
+            </div>
+            <div class="col-md-2">
+                <h1>VS</h1>
+            </div>
+            <div class="col-md-5">
+                <h3>{{ match.player2.name if match.player2 else 'TBD' }}</h3>
+                <div class="display-4 text-primary" id="player2-total-score">
+                    {% if match.player2_id in scores %}
+                        {% if match.tournament.tournament_type.value == 'kyourgi' %}
+                            {{ scores[match.player2_id].points }}
+                        {% else %}
+                            {{ "%.1f"|format(scores[match.player2_id].total_score) }}
+                        {% endif %}
+                    {% else %}
+                        0
+                    {% endif %}
+                </div>
+                {% if match.winner_id == match.player2_id %}
+                    <span class="badge bg-success">Winner!</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scoring Form -->
+{% if match.player1 and match.player2 %}
+<div class="card shadow">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">
+            {% if match.tournament.tournament_type.value == 'kyourgi' %}
+                Kyourgi Scoring
+            {% else %}
+                Poomsae Scoring
+            {% endif %}
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('scoring.update_score', match_id=match.id) }}">
+            {{ form.hidden_tag() }}
+            
+            {% if match.tournament.tournament_type.value == 'kyourgi' %}
+                <!-- Kyourgi Scoring -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-center">{{ match.player1.name }}</h6>
+                        <div class="row">
+                            <div class="col-4">
+                                {{ form.player1_points.label(class="form-label small") }}
+                                {{ form.player1_points(class="form-control text-center", type="number") }}
+                            </div>
+                            <div class="col-4">
+                                {{ form.player1_warnings.label(class="form-label small") }}
+                                {{ form.player1_warnings(class="form-control text-center", type="number") }}
+                            </div>
+                            <div class="col-4">
+                                {{ form.player1_deductions.label(class="form-label small") }}
+                                {{ form.player1_deductions(class="form-control text-center", type="number") }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="text-center">{{ match.player2.name }}</h6>
+                        <div class="row">
+                            <div class="col-4">
+                                {{ form.player2_points.label(class="form-label small") }}
+                                {{ form.player2_points(class="form-control text-center", type="number") }}
+                            </div>
+                            <div class="col-4">
+                                {{ form.player2_warnings.label(class="form-label small") }}
+                                {{ form.player2_warnings(class="form-control text-center", type="number") }}
+                            </div>
+                            <div class="col-4">
+                                {{ form.player2_deductions.label(class="form-label small") }}
+                                {{ form.player2_deductions(class="form-control text-center", type="number") }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <!-- Poomsae Scoring -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-center">{{ match.player1.name }}</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                {{ form.player1_accuracy.label(class="form-label small") }}
+                                {{ form.player1_accuracy(class="form-control text-center", type="number", step="0.1", min="0", max="10") }}
+                            </div>
+                            <div class="col-6">
+                                {{ form.player1_presentation.label(class="form-label small") }}
+                                {{ form.player1_presentation(class="form-control text-center", type="number", step="0.1", min="0", max="10") }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="text-center">{{ match.player2.name }}</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                {{ form.player2_accuracy.label(class="form-label small") }}
+                                {{ form.player2_accuracy(class="form-control text-center", type="number", step="0.1", min="0", max="10") }}
+                            </div>
+                            <div class="col-6">
+                                {{ form.player2_presentation.label(class="form-label small") }}
+                                {{ form.player2_presentation(class="form-control text-center", type="number", step="0.1", min="0", max="10") }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <div class="text-center mt-4">
+                {{ form.submit(class="btn btn-lg btn-success") }}
+                {% if match.completed %}
+                <a href="{{ url_for('scoring.match_scoring', match_id=match.id) }}" class="btn btn-lg btn-outline-secondary">
+                    <i class="fas fa-redo"></i> Reset Form
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+{% else %}
+<div class="card shadow">
+    <div class="card-body text-center">
+        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+        <h4>Match Not Ready for Scoring</h4>
+        <p class="text-muted">Both players must be assigned before scoring can begin.</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Match Actions -->
+<div class="card shadow mt-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Match Actions</h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            {% if match.schedule %}
+            <div class="col-md-4">
+                <form method="POST" action="{{ url_for('scheduling.complete_match', match_id=match.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-outline-danger btn-sm w-100" 
+                            {% if not match.completed %}disabled{% endif %}>
+                        <i class="fas fa-stop"></i><br>
+                        Complete Match
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+            <div class="col-md-4">
+                <button type="button" class="btn btn-outline-primary btn-sm w-100" onclick="refreshScores()">
+                    <i class="fas fa-sync"></i><br>
+                    Refresh Scores
+                </button>
+            </div>
+            <div class="col-md-4">
+                <button type="button" class="btn btn-outline-success btn-sm w-100" onclick="window.print()">
+                    <i class="fas fa-print"></i><br>
+                    Print Score Sheet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshScores() {
+    fetch(`/scoring/api/match/{{ match.id }}/score`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.scores.player1) {
+                document.getElementById('player1-total-score').textContent = data.scores.player1.points || data.scores.player1.total_score || 0;
+            }
+            if (data.scores.player2) {
+                document.getElementById('player2-total-score').textContent = data.scores.player2.points || data.scores.player2.total_score || 0;
+            }
+        })
+        .catch(error => console.error('Error refreshing scores:', error));
+}
+
+// Auto-refresh scores every 30 seconds
+setInterval(refreshScores, 30000);
+</script>
+{% endblock %}
