@@ -18,9 +18,23 @@
                 <a href="{{ url_for('main.create_player') }}" class="btn btn-success">
                     <i class="fas fa-user-plus"></i> Add Player
                 </a>
-                <a href="{{ url_for('main.excel_import_players', tournament_id=tournament.id) }}" class="btn btn-success">
-                    <i class="fas fa-file-excel"></i> Import Excel
-                </a>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-file-excel"></i> Import
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('main.excel_import_players', tournament_id=tournament.id) }}">
+                                <i class="fas fa-file-excel"></i> Standard Excel
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('main.import_google_forms', tournament_id=tournament.id) }}">
+                                <i class="fas fa-google"></i> Google Forms Excel
+                            </a>
+                        </li>
+                    </ul>
+                </div>
                 <a href="{{ url_for('main.generate_draw') }}" class="btn btn-warning">
                     <i class="fas fa-random"></i> Generate Draw
                 </a>

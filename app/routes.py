@@ -7,6 +7,7 @@ from app.forms import TournamentForm, PlayerForm, CategoryFilterForm, DrawForm
 from app.draw_algorithm import TournamentDrawAlgorithm
 from app.excel_utils import ExcelImportExport, ExcelImportError
 import io
+import pandas as pd
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
@@ -466,6 +467,162 @@ def excel_download_template():
     except Exception as e:
         flash(f'Error generating template: {str(e)}', 'error')
         return redirect(url_for('main.index'))
+
+@main.route('/import/googleforms/<int:tournament_id>', methods=['GET', 'POST'])
+def import_google_forms(tournament_id):
+    """Import players from Google Forms Excel file"""
+    tournament = Tournament.query.get_or_404(tournament_id)
+    
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file selected!', 'error')
+            return redirect(request.url)
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            flash('No file selected!', 'error')
+            return redirect(request.url)
+        
+        try:
+            # Read Excel file
+            file.seek(0)
+            df = pd.read_excel(file, engine='openpyxl')
+            
+            # Strip whitespace from column names
+            df.columns = df.columns.str.strip()
+            
+            # Check required columns (Arabic headers)
+            required_columns = [
+                'الجمعية و المدينة (بالعربية)',
+                'اسم المدرب أو الرئيس', 
+                'الاسم الكامل في حالة الفردي( أو اسمين أو ثلاثة في حالة الزوجي و الفريق)',
+                'الصنف',
+                'اختر الفئة المناسبة'
+            ]
+            
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                flash(f'Missing required columns: {", ".join(missing_columns)}', 'error')
+                return redirect(request.url)
+            
+            success_count = 0
+            error_list = []
+            
+            # Process each row
+            for index, row in df.iterrows():
+                try:
+                    # Extract data from Arabic columns
+                    club = str(row['الجمعية و المدينة (بالعربية)']).strip()
+                    coach = str(row['اسم المدرب أو الرئيس']).strip()
+                    name = str(row['الاسم الكامل في حالة الفردي( أو اسمين أو ثلاثة في حالة الزوجي و الفريق)']).strip()
+                    gender_raw = str(row['الصنف']).strip()
+                    age_group_raw = str(row['اختر الفئة المناسبة']).strip()
+                    
+                    # Skip empty rows
+                    if not name or name.lower() == 'nan':
+                        continue
+                    if not club or club.lower() == 'nan':
+                        continue
+                    
+                    # Map gender
+                    gender_mapping = {
+                        'ذكر': 'male',
+                        'إناث': 'female', 
+                        'بنين': 'male',
+                        'بنات': 'female',
+                        'male': 'male',
+                        'female': 'female',
+                        'M': 'male',
+                        'F': 'female'
+                    }
+                    gender = gender_mapping.get(gender_raw.lower(), None)
+                    if not gender:
+                        error_list.append(f"Row {index + 2}: Invalid gender '{gender_raw}'")
+                        continue
+                    
+                    # Map age group
+                    age_group_mapping = {
+                        'الناشئين': 'cadet',
+                        'شباب': 'junior',
+                        'كبار': 'senior',
+                        'cadet': 'cadet',
+                        'junior': 'junior', 
+                        'senior': 'senior',
+                        'ناشئين': 'cadet',
+                        'شباب': 'junior',
+                        'كبار': 'senior'
+                    }
+                    age_group = age_group_mapping.get(age_group_raw.lower(), None)
+                    if not age_group:
+                        error_list.append(f"Row {index + 2}: Invalid age group '{age_group_raw}'")
+                        continue
+                    
+                    # Determine age from age group (approximate)
+                    age_from_group = {
+                        'cadet': 15,
+                        'junior': 25, 
+                        'senior': 40
+                    }
+                    age = age_from_group.get(age_group, 20)
+                    
+                    # Check for duplicate players in same tournament
+                    existing_player = Player.query.filter_by(
+                        name=name,
+                        club=club,
+                        tournament_id=tournament_id
+                    ).first()
+                    
+                    if existing_player:
+                        error_list.append(f"Row {index + 2}: Player '{name}' from '{club}' already exists in this tournament")
+                        continue
+                    
+                    # Create player object
+                    player = Player(
+                        name=name,
+                        club=club,
+                        coach=coach if coach and coach.lower() != 'nan' else None,
+                        gender=Gender(gender),
+                        age=age,
+                        age_group=AgeGroup(age_group),
+                        weight_category=None,  # Will be set based on weight if provided
+                        tournament_id=tournament_id
+                    )
+                    
+                    # For Kyourgi tournaments, try to determine weight category
+                    if tournament.tournament_type == TournamentType.KYOURGI:
+                        player.weight_category = WeightCategory.MIDDLE  # Default to middle
+                    
+                    db.session.add(player)
+                    success_count += 1
+                    
+                except Exception as e:
+                    error_list.append(f"Row {index + 2}: {str(e)}")
+                    continue
+            
+            # Commit successful imports
+            if success_count > 0:
+                db.session.commit()
+                flash(f'Successfully imported {success_count} players from Google Forms!', 'success')
+                
+                # Flash errors (if any)
+                if error_list:
+                    flash(f'{len(error_list)} rows had errors and were skipped:', 'warning')
+                    for error in error_list[:5]:  # Show first 5 errors
+                        flash(error, 'warning')
+                    if len(error_list) > 5:
+                        flash(f'... and {len(error_list) - 5} more errors', 'warning')
+            else:
+                db.session.rollback()
+                flash('No players were imported due to errors.', 'error')
+            
+            return redirect(url_for('main.view_tournament', id=tournament_id))
+            
+        except Exception as e:
+            flash(f'Error reading Excel file: {str(e)}', 'error')
+            return redirect(request.url)
+    
+    return render_template('google_forms_import.html', tournament=tournament, title='Import Google Forms Excel')
 
 @main.route('/poomsae/score/<int:match_id>', methods=['GET', 'POST'])
 @login_required

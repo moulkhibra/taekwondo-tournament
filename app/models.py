@@ -50,6 +50,7 @@ class Player(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     club = db.Column(db.String(100), nullable=False)
+    coach = db.Column(db.String(100))  # Coach name from Google Forms
     gender = db.Column(db.Enum(Gender), nullable=False)
     age = db.Column(db.Integer, nullable=False)
     weight = db.Column(db.Float)  # Only for Kyourgi

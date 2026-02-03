@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Import Google Forms Excel - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-file-excel"></i> Import Google Forms Excel</h2>
+    <a href="{{ url_for('main.view_tournament', id=tournament.id) }}" class="btn btn-info">
+        <i class="fas fa-arrow-left"></i> Back to Tournament
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Upload Google Forms Excel File</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('main.import_google_forms', tournament_id=tournament.id) }}" 
+                      method="POST" enctype="multipart/form-data">
+                    
+                    <div class="mb-4">
+                        <label for="file" class="form-label fw-bold">
+                            <i class="fas fa-upload"></i> Select Excel File
+                        </label>
+                        <input type="file" class="form-control" name="file" id="file" required 
+                               accept=".xlsx,.xls">
+                        <div class="form-text">
+                            Please upload the Excel file exported from Google Forms with Arabic headers.
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-file-import"></i> Import Players
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Required Excel Format</h5>
+            </div>
+            <div class="card-body">
+                <h6 class="fw-bold text-primary">Required Arabic Headers:</h6>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success"></i> الجمعية و المدينة (بالعربية)</li>
+                    <li><i class="fas fa-check text-success"></i> اسم المدرب أو الرئيس</li>
+                    <li><i class="fas fa-check text-success"></i> الاسم الكامل في حالة الفردي</li>
+                    <li><i class="fas fa-check text-success"></i> الصنف</li>
+                    <li><i class="fas fa-check text-success"></i> اختر الفئة المناسبة</li>
+                </ul>
+                
+                <h6 class="fw-bold text-primary mt-3">Accepted Values:</h6>
+                <p class="mb-2"><strong>الصنف (Gender):</strong></p>
+                <ul class="list-unstyled">
+                    <li>ذكر / بنين / Male / M</li>
+                    <li>إناث / بنات / Female / F</li>
+                </ul>
+                
+                <p class="mb-2"><strong>الفئة (Age Group):</strong></p>
+                <ul class="list-unstyled">
+                    <li>الناشئين / Cadet</li>
+                    <li>شباب / Junior</li>
+                    <li>كبار / Senior</li>
+                </ul>
+                
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    <small>
+                        Age will be automatically assigned based on age group: 
+                        Cadet (15 years), Junior (25 years), Senior (40 years)
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card shadow mt-3">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">Import Tips</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled small">
+                    <li><i class="fas fa-lightbulb text-warning"></i> Make sure all required columns exist</li>
+                    <li><i class="fas fa-lightbulb text-warning"></i> Player names must be unique per tournament</li>
+                    <li><i class="fas fa-lightbulb text-warning"></i> Coach information is optional</li>
+                    <li><i class="fas fa-lightbulb text-warning"></i> Empty rows will be skipped</li>
+                    <li><i class="fas fa-lightbulb text-warning"></i> Use supported Arabic/English values</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
