@@ -34,7 +34,8 @@ def create_app():
     def inject_tournaments():
         from app.models import Tournament
         tournaments = Tournament.query.order_by(Tournament.date.desc()).all()
-        return dict(tournaments=[{'id': t.id, 'name': t.name} for t in tournaments])
+        return dict(tournaments=[{'id': t.id, 'name': t.name} for t in tournaments], 
+                   tournaments_json=[{'id': t.id, 'name': t.name} for t in tournaments])
     
     # Import routes after app creation to avoid circular imports
     from app.routes import main

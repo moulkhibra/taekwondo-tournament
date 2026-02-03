@@ -134,5 +134,6 @@ class MatchScheduleForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(MatchScheduleForm, self).__init__(*args, **kwargs)
+        from app.models import User, UserRole
         self.referee_id.choices = [(0, 'No Referee')] + [(u.id, u.full_name) 
-                                   for u in User.query.filter_by(role='referee').filter_by(is_active_user=True).all()]
+                                   for u in User.query.filter_by(role=UserRole.REFEREE.value).filter_by(is_active_user=True).all()]

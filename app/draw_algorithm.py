@@ -10,7 +10,7 @@ class TournamentDrawAlgorithm:
     def __init__(self, tournament):
         self.tournament = tournament
         self.players = []  # Will be set externally
-        self.players_by_category = self._categorize_players()
+        self.players_by_category = {}
     
     def _categorize_players(self):
         """
@@ -20,7 +20,7 @@ class TournamentDrawAlgorithm:
         categorized = {}
         
         # This will be called after players are set
-        if hasattr(self, 'players'):
+        if hasattr(self, 'players') and self.players:
             for player in self.players:
                 category_key = self._get_category_key(player)
                 if category_key not in categorized:
@@ -120,6 +120,8 @@ class TournamentDrawAlgorithm:
         Generate complete tournament draw
         Returns dictionary with categories and their matches
         """
+        # Update categorization in case players were added after init
+        self.players_by_category = self._categorize_players()
         tournament_draw = {}
         
         for category_key, category_players in self.players_by_category.items():
