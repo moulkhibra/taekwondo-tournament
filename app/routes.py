@@ -470,18 +470,23 @@ def excel_download_template():
 
 @main.route('/import/googleforms/<int:tournament_id>', methods=['GET', 'POST'])
 def import_google_forms(tournament_id):
-    """Import players from Google Forms Excel file"""
+    """استيراد المشاركين من ملف Google Forms Excel"""
     tournament = Tournament.query.get_or_404(tournament_id)
     
     if request.method == 'POST':
         if 'file' not in request.files:
-            flash('No file selected!', 'error')
+            flash('الرجاء اختيار ملف!', 'error')
             return redirect(request.url)
         
         file = request.files['file']
         
         if file.filename == '':
-            flash('No file selected!', 'error')
+            flash('الرجاء اختيار ملف!', 'error')
+            return redirect(request.url)
+        
+        # Check file extension
+        if not file.filename.lower().endswith(('.xlsx', '.xls')):
+            flash('خطأ: الرجاء رفع ملف Excel صالح (.xlsx أو .xls)!', 'error')
             return redirect(request.url)
         
         try:
@@ -492,137 +497,177 @@ def import_google_forms(tournament_id):
             # Strip whitespace from column names
             df.columns = df.columns.str.strip()
             
-            # Check required columns (Arabic headers)
-            required_columns = [
-                'الجمعية و المدينة (بالعربية)',
-                'اسم المدرب أو الرئيس', 
-                'الاسم الكامل في حالة الفردي( أو اسمين أو ثلاثة في حالة الزوجي و الفريق)',
-                'الصنف',
-                'اختر الفئة المناسبة'
-            ]
+            # Check required columns (Arabic headers with variations)
+            required_columns_variations = {
+                'club': ['الجمعية و المدينة (بالعربية)', 'الجمعية والبلدية', 'النادي والمدينة', 'club'],
+                'coach': ['اسم المدرب أو الرئيس', 'اسم المدرب', 'المدرب', 'coach'],
+                'name': ['الاسم الكامل في حالة الفردي أو اسمين/ثلاثة في حالة الزوجي والفريق', 
+                         'الاسم الكامل', 'الأسماء', 'name'],
+                'gender': ['الصنف', 'الفئة', 'gender'],
+                'age_group': ['اختر الفئة المناسبة', 'الفئة العمرية', 'age group']
+            }
             
-            missing_columns = [col for col in required_columns if col not in df.columns]
-            if missing_columns:
-                flash(f'Missing required columns: {", ".join(missing_columns)}', 'error')
+            # Find actual column names in the file
+            found_columns = {}
+            for field, variations in required_columns_variations.items():
+                for col in variations:
+                    if col in df.columns:
+                        found_columns[field] = col
+                        break
+            
+            missing_fields = [field for field in required_columns_variations.keys() 
+                           if field not in found_columns]
+            
+            if missing_fields:
+                flash(f'خطأ: الأعمدة غير موجودة أو الملف غير صالح! الأعمدة المطلوبة: {", ".join(missing_fields)}', 'error')
                 return redirect(request.url)
             
             success_count = 0
+            duplicate_count = 0
             error_list = []
+            import_report = []
             
             # Process each row
             for index, row in df.iterrows():
                 try:
-                    # Extract data from Arabic columns
-                    club = str(row['الجمعية و المدينة (بالعربية)']).strip()
-                    coach = str(row['اسم المدرب أو الرئيس']).strip()
-                    name = str(row['الاسم الكامل في حالة الفردي( أو اسمين أو ثلاثة في حالة الزوجي و الفريق)']).strip()
-                    gender_raw = str(row['الصنف']).strip()
-                    age_group_raw = str(row['اختر الفئة المناسبة']).strip()
+                    # Extract data using found column names
+                    club = str(row[found_columns['club']]).strip()
+                    coach = str(row[found_columns['coach']]).strip()
+                    names_str = str(row[found_columns['name']]).strip()
+                    gender_raw = str(row[found_columns['gender']]).strip()
+                    age_group_raw = str(row[found_columns['age_group']]).strip()
                     
                     # Skip empty rows
-                    if not name or name.lower() == 'nan':
+                    if not names_str or names_str.lower() == 'nan' or names_str == '':
                         continue
-                    if not club or club.lower() == 'nan':
+                    if not club or club.lower() == 'nan' or club == '':
                         continue
                     
-                    # Map gender
+                    # Enhanced gender mapping
                     gender_mapping = {
-                        'ذكر': 'male',
-                        'إناث': 'female', 
-                        'بنين': 'male',
-                        'بنات': 'female',
-                        'male': 'male',
-                        'female': 'female',
-                        'M': 'male',
-                        'F': 'female'
+                        # Arabic
+                        'ذكر': 'male', 'بنين': 'male', 'إناث': 'female', 'بنات': 'female',
+                        # English variations
+                        'male': 'male', 'M': 'male', 'men': 'male', 'boy': 'male',
+                        'female': 'female', 'F': 'female', 'women': 'female', 'girl': 'female',
+                        # Case insensitive handling
+                        'male': 'male', 'female': 'female'
                     }
-                    gender = gender_mapping.get(gender_raw.lower(), None)
+                    
+                    gender = None
+                    for key, value in gender_mapping.items():
+                        if gender_raw.lower() == key.lower():
+                            gender = value
+                            break
+                    
                     if not gender:
-                        error_list.append(f"Row {index + 2}: Invalid gender '{gender_raw}'")
+                        error_list.append(f"السطر {index + 2}: قيمة الجنس '{gender_raw}' غير صحيحة")
                         continue
                     
-                    # Map age group
+                    # Enhanced age group mapping
                     age_group_mapping = {
-                        'الناشئين': 'cadet',
-                        'شباب': 'junior',
-                        'كبار': 'senior',
-                        'cadet': 'cadet',
-                        'junior': 'junior', 
-                        'senior': 'senior',
-                        'ناشئين': 'cadet',
-                        'شباب': 'junior',
-                        'كبار': 'senior'
+                        # Arabic
+                        'الناشئين': 'cadet', 'ناشئين': 'cadet', 'إشراف': 'cadet',
+                        'شباب': 'junior', 'الشباب': 'junior',
+                        'كبار': 'senior', 'الكبار': 'senior',
+                        # English
+                        'cadet': 'cadet', 'junior': 'junior', 'senior': 'senior'
                     }
-                    age_group = age_group_mapping.get(age_group_raw.lower(), None)
+                    
+                    age_group = None
+                    for key, value in age_group_mapping.items():
+                        if age_group_raw.lower() == key.lower():
+                            age_group = value
+                            break
+                    
                     if not age_group:
-                        error_list.append(f"Row {index + 2}: Invalid age group '{age_group_raw}'")
+                        error_list.append(f"السطر {index + 2}: قيمة الفئة العمرية '{age_group_raw}' غير صحيحة")
                         continue
                     
-                    # Determine age from age group (approximate)
-                    age_from_group = {
-                        'cadet': 15,
-                        'junior': 25, 
-                        'senior': 40
-                    }
-                    age = age_from_group.get(age_group, 20)
+                    # Determine registration type from names
+                    names = [name.strip() for name in names_str.split('/') if name.strip()]
+                    registration_type = 'individual'
+                    if len(names) > 1:
+                        registration_type = 'pair' if len(names) <= 2 else 'team'
                     
-                    # Check for duplicate players in same tournament
-                    existing_player = Player.query.filter_by(
-                        name=name,
-                        club=club,
-                        tournament_id=tournament_id
-                    ).first()
-                    
-                    if existing_player:
-                        error_list.append(f"Row {index + 2}: Player '{name}' from '{club}' already exists in this tournament")
-                        continue
-                    
-                    # Create player object
-                    player = Player(
-                        name=name,
-                        club=club,
-                        coach=coach if coach and coach.lower() != 'nan' else None,
-                        gender=Gender(gender),
-                        age=age,
-                        age_group=AgeGroup(age_group),
-                        weight_category=None,  # Will be set based on weight if provided
-                        tournament_id=tournament_id
-                    )
-                    
-                    # For Kyourgi tournaments, try to determine weight category
-                    if tournament.tournament_type == TournamentType.KYOURGI:
-                        player.weight_category = WeightCategory.MIDDLE  # Default to middle
-                    
-                    db.session.add(player)
-                    success_count += 1
+                    # Create players for each name in registration
+                    for i, name in enumerate(names):
+                        if not name or name.lower() == 'nan':
+                            continue
+                        
+                        # Check for duplicate players in same tournament
+                        existing_player = Player.query.filter_by(
+                            name=name,
+                            club=club,
+                            tournament_id=tournament_id
+                        ).first()
+                        
+                        if existing_player:
+                            duplicate_count += 1
+                            import_report.append(f"تم تخطي اللاعب '{name}' من '{club}' - مسجل مسبقاً")
+                            continue
+                        
+                        # Determine age from age group
+                        age_from_group = {
+                            'cadet': 15,  # Average age for cadet
+                            'junior': 25,  # Average age for junior
+                            'senior': 40   # Average age for senior
+                        }
+                        age = age_from_group.get(age_group, 20)
+                        
+                        # Create player object
+                        player = Player(
+                            name=name,
+                            club=club,
+                            coach=coach if coach and coach.lower() != 'nan' else None,
+                            gender=Gender(gender),
+                            age=age,
+                            age_group=AgeGroup(age_group),
+                            registration_type=RegistrationType(registration_type),
+                            team_members=str(names) if len(names) > 1 else None,
+                            weight_category=None,  # Will be set based on tournament type
+                            tournament_id=tournament_id
+                        )
+                        
+                        # For Kyourgi tournaments, determine weight category
+                        if tournament.tournament_type == TournamentType.KYOURGI:
+                            player.weight_category = WeightCategory.MIDDLE  # Default to middle
+                        
+                        db.session.add(player)
+                        success_count += 1
                     
                 except Exception as e:
-                    error_list.append(f"Row {index + 2}: {str(e)}")
+                    error_list.append(f"السطر {index + 2}: {str(e)}")
                     continue
             
             # Commit successful imports
             if success_count > 0:
                 db.session.commit()
-                flash(f'Successfully imported {success_count} players from Google Forms!', 'success')
+                flash('تم استيراد المشاركين بنجاح!', 'success')
+                flash(f'تم إضافة {success_count} لاعب بنجاح', 'info')
+                
+                # Show import report
+                if duplicate_count > 0:
+                    flash(f'تم تخطي {duplicate_count} لاعب بسبب التكرار', 'warning')
                 
                 # Flash errors (if any)
                 if error_list:
-                    flash(f'{len(error_list)} rows had errors and were skipped:', 'warning')
-                    for error in error_list[:5]:  # Show first 5 errors
-                        flash(error, 'warning')
-                    if len(error_list) > 5:
-                        flash(f'... and {len(error_list) - 5} more errors', 'warning')
+                    flash(f'حدثت أخطاء في {len(error_list)} أسطر:', 'error')
+                    for error in error_list[:3]:  # Show first 3 errors
+                        flash(error, 'error')
+                    if len(error_list) > 3:
+                        flash(f'و {len(error_list) - 3} أخطاء إضافية...', 'error')
             else:
                 db.session.rollback()
-                flash('No players were imported due to errors.', 'error')
+                flash('لم يتم استيراد أي لاعب بسبب الأخطاء', 'error')
             
             return redirect(url_for('main.view_tournament', id=tournament_id))
             
         except Exception as e:
-            flash(f'Error reading Excel file: {str(e)}', 'error')
+            flash(f'خطأ: الأعمدة غير موجودة أو الملف غير صالح! {str(e)}', 'error')
             return redirect(request.url)
     
-    return render_template('google_forms_import.html', tournament=tournament, title='Import Google Forms Excel')
+    return render_template('google_forms_import.html', tournament=tournament, title='استيراد ملف Google Forms')
 
 @main.route('/poomsae/score/<int:match_id>', methods=['GET', 'POST'])
 @login_required

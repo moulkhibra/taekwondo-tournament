@@ -59,6 +59,31 @@
     </div>
 </div>
 
+<!-- Google Forms Import Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fas fa-file-import"></i> استيراد ملف Google Forms</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('main.import_google_forms', tournament_id=tournament.id) }}" 
+                      method="POST" enctype="multipart/form-data" class="row g-3">
+                    <div class="col-md-8">
+                        <input type="file" class="form-control" name="file" required 
+                               accept=".xlsx,.xls" placeholder="اختر ملف Excel">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-upload"></i> استيراد ملف Google Forms
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Players Section -->
 <div class="row mb-4">
     <div class="col-12">

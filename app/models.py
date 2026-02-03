@@ -46,6 +46,11 @@ class Tournament(db.Model):
     players = db.relationship('Player', backref='tournament', lazy=True, cascade='all, delete-orphan')
     matches = db.relationship('Match', backref='tournament', lazy=True, cascade='all, delete-orphan')
 
+class RegistrationType(Enum):
+    INDIVIDUAL = "individual"
+    PAIR = "pair"
+    TEAM = "team"
+
 class Player(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -58,6 +63,11 @@ class Player(db.Model):
     weight_category = db.Column(db.Enum(WeightCategory))
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Google Forms specific fields
+    registration_type = db.Column(db.Enum(RegistrationType), default=RegistrationType.INDIVIDUAL)
+    team_members = db.Column(db.Text)  # Store additional team members as JSON string
+    birthdate = db.Column(db.Date)  # For automatic age calculation
     
     # Relationships
     matches_as_player1 = db.relationship('Match', foreign_keys='Match.player1_id', backref='player1', lazy=True)

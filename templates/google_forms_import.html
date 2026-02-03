@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Import Google Forms Excel - {{ super() }}{% endblock %}
+{% block title %}استيراد ملف Google Forms - {{ super() }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="fas fa-file-excel"></i> Import Google Forms Excel</h2>
+    <h2><i class="fas fa-file-excel"></i> استيراد ملف Google Forms</h2>
     <a href="{{ url_for('main.view_tournament', id=tournament.id) }}" class="btn btn-info">
-        <i class="fas fa-arrow-left"></i> Back to Tournament
+        <i class="fas fa-arrow-left"></i> العودة للبطولة
     </a>
 </div>
 
@@ -14,7 +14,7 @@
     <div class="col-md-8">
         <div class="card shadow">
             <div class="card-header bg-success text-white">
-                <h5 class="mb-0">Upload Google Forms Excel File</h5>
+                <h5 class="mb-0">رفع ملف Google Forms Excel</h5>
             </div>
             <div class="card-body">
                 <form action="{{ url_for('main.import_google_forms', tournament_id=tournament.id) }}" 
@@ -22,18 +22,18 @@
                     
                     <div class="mb-4">
                         <label for="file" class="form-label fw-bold">
-                            <i class="fas fa-upload"></i> Select Excel File
+                            <i class="fas fa-upload"></i> اختيار ملف Excel
                         </label>
                         <input type="file" class="form-control" name="file" id="file" required 
                                accept=".xlsx,.xls">
-                        <div class="form-text">
-                            Please upload the Excel file exported from Google Forms with Arabic headers.
+                        <div class="form-text text-end">
+                            الرجاء رفع ملف Excel المُصدَّر من Google Forms مع العناوين العربية
                         </div>
                     </div>
                     
                     <div class="text-center">
                         <button type="submit" class="btn btn-success btn-lg">
-                            <i class="fas fa-file-import"></i> Import Players
+                            <i class="fas fa-file-import"></i> استيراد المشاركين
                         </button>
                     </div>
                 </form>
@@ -44,37 +44,44 @@
     <div class="col-md-4">
         <div class="card shadow">
             <div class="card-header bg-info text-white">
-                <h5 class="mb-0">Required Excel Format</h5>
+                <h5 class="mb-0">تنسيق الملف المطلوب</h5>
             </div>
             <div class="card-body">
-                <h6 class="fw-bold text-primary">Required Arabic Headers:</h6>
+                <h6 class="fw-bold text-primary">العناوين العربية المطلوبة:</h6>
                 <ul class="list-unstyled">
                     <li><i class="fas fa-check text-success"></i> الجمعية و المدينة (بالعربية)</li>
                     <li><i class="fas fa-check text-success"></i> اسم المدرب أو الرئيس</li>
-                    <li><i class="fas fa-check text-success"></i> الاسم الكامل في حالة الفردي</li>
+                    <li><i class="fas fa-check text-success"></i> الاسم الكامل (فردي/زوجي/فريق)</li>
                     <li><i class="fas fa-check text-success"></i> الصنف</li>
                     <li><i class="fas fa-check text-success"></i> اختر الفئة المناسبة</li>
                 </ul>
                 
-                <h6 class="fw-bold text-primary mt-3">Accepted Values:</h6>
+                <h6 class="fw-bold text-primary mt-3">القيم المقبولة:</h6>
                 <p class="mb-2"><strong>الصنف (Gender):</strong></p>
-                <ul class="list-unstyled">
+                <ul class="list-unstyled small">
                     <li>ذكر / بنين / Male / M</li>
                     <li>إناث / بنات / Female / F</li>
                 </ul>
                 
-                <p class="mb-2"><strong>الفئة (Age Group):</strong></p>
-                <ul class="list-unstyled">
+                <p class="mb-2"><strong>الفئة العمرية:</strong></p>
+                <ul class="list-unstyled small">
                     <li>الناشئين / Cadet</li>
                     <li>شباب / Junior</li>
                     <li>كبار / Senior</li>
                 </ul>
                 
+                <h6 class="fw-bold text-primary mt-3">أنواع التسجيل:</h6>
+                <ul class="list-unstyled small">
+                    <li><strong>فردي:</strong> اسم واحد فقط</li>
+                    <li><strong>زوجي:</strong> اسمين مفصولين بـ "/"</li>
+                    <li><strong>فريق:</strong> ثلاثة أسماء أو أكثر مفصولة بـ "/"</li>
+                </ul>
+                
                 <div class="alert alert-info mt-3">
                     <i class="fas fa-info-circle"></i>
                     <small>
-                        Age will be automatically assigned based on age group: 
-                        Cadet (15 years), Junior (25 years), Senior (40 years)
+                        سيتم تحديد العمر تلقائياً بناءً على الفئة: 
+                        الناشئين (15 سنة)، شباب (25 سنة)، كبار (40 سنة)
                     </small>
                 </div>
             </div>
@@ -82,16 +89,42 @@
         
         <div class="card shadow mt-3">
             <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0">Import Tips</h5>
+                <h5 class="mb-0">نصائح الاستيراد</h5>
             </div>
             <div class="card-body">
                 <ul class="list-unstyled small">
-                    <li><i class="fas fa-lightbulb text-warning"></i> Make sure all required columns exist</li>
-                    <li><i class="fas fa-lightbulb text-warning"></i> Player names must be unique per tournament</li>
-                    <li><i class="fas fa-lightbulb text-warning"></i> Coach information is optional</li>
-                    <li><i class="fas fa-lightbulb text-warning"></i> Empty rows will be skipped</li>
-                    <li><i class="fas fa-lightbulb text-warning"></i> Use supported Arabic/English values</li>
+                    <li><i class="fas fa-check-circle text-success"></i> التأكد من وجود جميع الأعمدة المطلوبة</li>
+                    <li><i class="fas fa-check-circle text-success"></i> أسماء اللاعبين يجب أن تكون فريدة للبطولة</li>
+                    <li><i class="fas fa-check-circle text-success"></i> معلومات المدرب اختيارية</li>
+                    <li><i class="fas fa-check-circle text-success"></i> سيتم تخطي الأسطر الفارغة</li>
+                    <li><i class="fas fa-check-circle text-success"></i> استخدام القيم العربية أو الإنجليزية المدعومة</li>
+                    <li><i class="fas fa-check-circle text-success"></i> للتسجيلات الزوجية والفريقية: استخدم "/" للفصل بين الأسماء</li>
                 </ul>
+            </div>
+        </div>
+        
+        <div class="card shadow mt-3">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">مثال على التسجيل</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-light">
+                    <h6 class="text-center mb-3"> أمثلة على حقل الأسماء:</h6>
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <strong>فردي:</strong><br>
+                            <code>أحمد محمد</code>
+                        </div>
+                        <div class="col-4">
+                            <strong>زوجي:</strong><br>
+                            <code>أحمد محمد/محمد علي</code>
+                        </div>
+                        <div class="col-4">
+                            <strong>فريق:</strong><br>
+                            <code>أحمد/محمد/خالد</code>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
