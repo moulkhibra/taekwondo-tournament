@@ -351,4 +351,4 @@ For issues, questions, or contributions, please refer to the project documentati
 
 ---
 
-**Enjoy managing your Taekwondo tournaments! 🥋**
+**Enjoy managing your Taekwondo tournaments! 🥋**# taekwondo-tournament
