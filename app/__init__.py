@@ -17,7 +17,10 @@ def create_app():
     app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
     
     # Configuration
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+    if os.environ.get('FLASK_ENV') == 'development':
+        app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+    else:
+        app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///tournament.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     

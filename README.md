@@ -2,6 +2,9 @@
 
 A comprehensive web application for managing Taekwondo tournaments with support for both Kyourgi (fighting) and Poomsae (forms) competitions.
 
+> **Status**: functional prototype — developed as a practical Flask application.
+> Defaults to safe configuration; run with `SECRET_KEY` set and `FLASK_ENV=production` for any real event.
+
 ## Features
 
 - **Tournament Management**: Create and manage tournaments with full details

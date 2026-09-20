@@ -19,7 +19,9 @@ def login():
             login_user(user, remember=form.remember_me.data)
             flash(f'Welcome back, {user.full_name}!', 'success')
             next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('main.index'))
+            if next_page and next_page.startswith('/') and not next_page.startswith('//') and '\\' not in next_page:
+                return redirect(next_page)
+            return redirect(url_for('main.index'))
         else:
             flash('Invalid username or password', 'error')
     
